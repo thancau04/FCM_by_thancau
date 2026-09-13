@@ -4,16 +4,33 @@
     package="io.github.muntashirakon.setedit"
     android:installLocation="auto">
 
+    <!-- Quyền ghi cài đặt hệ thống -->
     <uses-permission
         android:name="android.permission.WRITE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
     <uses-permission
         android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
+
+    <!-- AFCM: Quản lý toàn bộ bộ nhớ ngoài (TC.json) -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+
+    <!-- Foreground Service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Thông báo (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Boot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Bộ nhớ ngoài (legacy, Android < 11) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
     <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" />
 
     <uses-feature
@@ -31,23 +48,26 @@
         android:allowBackup="false"
         android:banner="@mipmap/ic_banner"
         tools:ignore="UnusedAttribute">
+
+        <!-- Activity chính -->
         <activity
             android:label="SetEdit"
             android:name=".EditorActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+
         <activity
             android:name=".shortcut.ShortcutActivity"
             android:launchMode="singleInstance"
             android:exported="false" />
 
+        <!-- BootReceiver gốc (boot.BootReceiver) — giữ nguyên cho BootService -->
         <receiver
             android:name=".boot.BootReceiver"
             android:exported="true"
@@ -57,9 +77,30 @@
             </intent-filter>
         </receiver>
 
+        <!-- BootService gốc -->
         <service
             android:name=".boot.BootService"
             android:exported="false" />
+
+        <!-- AFCM: BootReceiver tại root package khởi động AutoApplyService -->
+        <receiver
+            android:name="io.github.muntashirakon.setedit.BootReceiver"
+            android:exported="true"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- AFCM: AutoApplyService -->
+        <service
+            android:name="io.github.muntashirakon.setedit.AutoApplyService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Whitelist Automation for System Settings" />
+        </service>
 
         <meta-data
             android:name="android.max_aspect"

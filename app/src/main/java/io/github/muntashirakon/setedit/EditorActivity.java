@@ -1,7 +1,14 @@
 package io.github.muntashirakon.setedit;
 
+import android.Manifest;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.view.Menu;
@@ -21,6 +28,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.AppCompatSpinner;
 import androidx.appcompat.widget.SearchView;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -64,6 +72,7 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
     private RecyclerView listView;
     private SharedPreferences preferences;
 
+    // Launcher lưu file JSON
     private final ActivityResultLauncher<String> post21SaveLauncher = registerForActivityResult(
             new ActivityResultContracts.CreateDocument("application/json"),
             uri -> {
@@ -78,6 +87,16 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
                 }
             });
 
+    // Launcher xin quyền POST_NOTIFICATIONS
+    private final ActivityResultLauncher<String> notificationPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                // Không cần xử lý thêm — service vẫn chạy dù quyền bị từ chối
+            });
+
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+
     private void displayOneTimeWarningDialog() {
         final SharedPreferences preferences = getPreferences(MODE_PRIVATE);
         boolean hasWarned = preferences.getBoolean("has_warned", false);
@@ -88,6 +107,60 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
                 .show();
         preferences.edit().putBoolean("has_warned", true).apply();
     }
+
+    /**
+     * Kiểm tra & yêu cầu quyền POST_NOTIFICATIONS (Android 13+).
+     */
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            }
+        }
+    }
+
+    /**
+     * Kiểm tra quyền MANAGE_EXTERNAL_STORAGE (All Files Access).
+     * Nếu chưa cấp, mở Settings để người dùng cấp thủ công.
+     */
+    private void checkAllFilesAccessPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                try {
+                    startActivity(intent);
+                } catch (Exception e) {
+                    // Fallback nếu thiết bị không hỗ trợ intent trực tiếp
+                    Intent fallback = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                    startActivity(fallback);
+                }
+            }
+        }
+    }
+
+    /**
+     * Khởi động AutoApplyService.
+     */
+    private void startAutoApplyService() {
+        Intent serviceIntent = new Intent(this, AutoApplyService.class);
+        ContextCompat.startForegroundService(this, serviceIntent);
+    }
+
+    /**
+     * Gửi lệnh áp dụng ngay tới AutoApplyService.
+     */
+    private void triggerApplyNow() {
+        Intent intent = new Intent(this, AutoApplyService.class);
+        intent.setAction(AutoApplyService.ACTION_APPLY_NOW);
+        ContextCompat.startForegroundService(this, intent);
+        Toast.makeText(this, "AFCM: Đang áp dụng cấu hình từ TC.json…", Toast.LENGTH_SHORT).show();
+    }
+
+    // -----------------------------------------------------------------------
+    // Dialog thêm item mới
+    // -----------------------------------------------------------------------
 
     public void addNewItemDialog() {
         View editorDialogView = getLayoutInflater().inflate(R.layout.dialog_new, null);
@@ -122,6 +195,10 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
+
+    // -----------------------------------------------------------------------
+    // Lifecycle
+    // -----------------------------------------------------------------------
 
     @Override
     public void onCreate(Bundle bundle) {
@@ -162,6 +239,12 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
         UiUtils.applyWindowInsetsAsMargin(addNewItem);
         // Display warning if it's the first time
         displayOneTimeWarningDialog();
+
+        // === AFCM: Quyền và khởi động service ===
+        requestNotificationPermissionIfNeeded();
+        checkAllFilesAccessPermission();
+        startAutoApplyService();
+
         // Refresh settings after 5 seconds
         new Timer().schedule(new TimerTask() {
             @Override
@@ -170,6 +253,10 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
             }
         }, 5000, 5000);
     }
+
+    // -----------------------------------------------------------------------
+    // Menu
+    // -----------------------------------------------------------------------
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -186,6 +273,9 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
         int id = item.getItemId();
         if (id == R.id.action_export) {
             post21SaveLauncher.launch(getFileName());
+            return true;
+        } else if (id == R.id.action_apply_whitelist) {
+            triggerApplyNow();
             return true;
         } else if (id == R.id.action_theme) {
             List<Integer> themeMap = new ArrayList<>(4);
@@ -207,6 +297,10 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
         }
         return super.onOptionsItemSelected(item);
     }
+
+    // -----------------------------------------------------------------------
+    // Spinner / Search callbacks
+    // -----------------------------------------------------------------------
 
     @Override
     public void onItemSelected(AdapterView<?> adapterView, View view, int position, long id) {
@@ -253,6 +347,10 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
         }
         return false;
     }
+
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
 
     private String getFileName() {
         return "SetEdit-" + System.currentTimeMillis() + ".json";

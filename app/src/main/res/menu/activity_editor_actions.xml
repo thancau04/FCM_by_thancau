@@ -9,6 +9,10 @@
         app:showAsAction="always" />
 
     <item
+        android:id="@+id/action_apply_whitelist"
+        android:title="@string/apply_whitelist_now" />
+
+    <item
         android:id="@+id/action_export"
         android:title="@string/save_as_json" />
 
