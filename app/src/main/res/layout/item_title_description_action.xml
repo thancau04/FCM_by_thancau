@@ -1,56 +1,78 @@
-<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/item_layout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:focusable="true"
-    android:paddingHorizontal="8dp"
-    android:paddingVertical="8dp">
+    android:orientation="vertical"
+    android:background="@drawable/menu_item_bg"
+    android:focusable="true">
 
-    <ImageView
-        android:id="@+id/drag_handle"
-        android:layout_width="48dp"
-        android:layout_height="match_parent"
-        android:layout_gravity="center_vertical"
-        android:scaleType="center"
-        android:src="@drawable/ic_drag"
-        android:contentDescription="@string/drag_item" />
-
-    <androidx.appcompat.widget.LinearLayoutCompat
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="8dp">
 
-        <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/title"
-            android:layout_width="match_parent"
+        <ImageView
+            android:id="@+id/drag_handle"
+            android:layout_width="48dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="center_vertical"
+            android:contentDescription="@string/drag_item"
+            android:scaleType="center"
+            android:src="@drawable/ic_drag"
+            app:tint="@color/fb_text_secondary" />
+
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceListItem"
-            tools:text="@tools:sample/lorem[5]" />
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-        <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/txt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="?android:attr/textColorSecondary"
-            tools:text="@tools:sample/lorem[20]" />
+            <TextView
+                android:id="@+id/title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/fb_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                tools:text="@tools:sample/lorem[5]" />
 
-    </androidx.appcompat.widget.LinearLayoutCompat>
+            <TextView
+                android:id="@+id/txt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/fb_text_secondary"
+                android:textSize="13sp"
+                tools:text="@tools:sample/lorem[20]" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/action"
-        style="@style/Widget.Material3.Button.IconButton"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:layout_gravity="center_vertical"
-        android:layout_marginStart="8dp"
-        android:layout_weight="0"
-        android:focusable="true"
-        app:icon="@drawable/ic_clear"
-        app:iconSize="24dp"
-        app:iconGravity="textStart" />
+        </LinearLayout>
 
-</androidx.appcompat.widget.LinearLayoutCompat>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/action"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="8dp"
+            android:layout_weight="0"
+            android:focusable="true"
+            app:icon="@drawable/ic_clear"
+            app:iconGravity="textStart"
+            app:iconSize="24dp"
+            app:iconTint="@color/fb_red"
+            app:rippleColor="@color/fb_ripple" />
+
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/fb_divider" />
+
+</LinearLayout>

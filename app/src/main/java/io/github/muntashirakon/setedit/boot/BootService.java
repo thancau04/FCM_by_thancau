@@ -15,8 +15,8 @@ import androidx.core.app.ServiceCompat;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import io.github.muntashirakon.setedit.BuildConfig;
-import io.github.muntashirakon.setedit.R;
+import com.thancau.setedit.BuildConfig;
+import com.thancau.setedit.R;
 
 public class BootService extends Service {
     public static final String TAG = BootService.class.getSimpleName();

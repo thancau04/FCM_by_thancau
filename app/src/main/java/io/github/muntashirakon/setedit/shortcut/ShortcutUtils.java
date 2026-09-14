@@ -2,7 +2,12 @@ package io.github.muntashirakon.setedit.shortcut;
 
 import android.content.Context;
 
+import android.graphics.Typeface;
+import android.widget.Button;
+
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.pm.ShortcutInfoCompat;
 import androidx.core.content.pm.ShortcutManagerCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -12,7 +17,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.github.muntashirakon.setedit.R;
+import com.thancau.setedit.R;
 import io.github.muntashirakon.setedit.boot.ActionItem;
 
 public final class ShortcutUtils {
@@ -28,11 +33,19 @@ public final class ShortcutUtils {
 
     public static void createShortcut(@NonNull Context context, @NonNull ShortcutItem shortcutItem) {
         if (!ShortcutManagerCompat.isRequestPinShortcutSupported(context)) {
-            new MaterialAlertDialogBuilder(context)
+            AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                     .setTitle(R.string.error_creating_shortcut)
                     .setMessage(context.getString(R.string.error_creating_shortcut_description))
                     .setPositiveButton(context.getString(android.R.string.ok), null)
-                    .show();
+                    .create();
+            dialog.setOnShowListener(d -> {
+                Button pos = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                if (pos != null) {
+                    pos.setTextColor(ContextCompat.getColor(context, R.color.fb_blue));
+                    pos.setTypeface(null, Typeface.BOLD);
+                }
+            });
+            dialog.show();
             return;
         }
         ShortcutManagerCompat.requestPinShortcut(context, shortcutItem.toShortcutInfo(context), null);
@@ -53,8 +66,8 @@ public final class ShortcutUtils {
             displayNewShortcutCreatorDialog(context, actionItem);
             return;
         }
-        new MaterialAlertDialogBuilder(context)
-                .setItems(R.array.shortcut_choices, (dialog, which) -> {
+        AlertDialog dialog = new MaterialAlertDialogBuilder(context)
+                .setItems(R.array.shortcut_choices, (d, which) -> {
                     if (which == 0) {
                         // Create a new shortcut
                         displayNewShortcutCreatorDialog(context, actionItem);
@@ -64,7 +77,14 @@ public final class ShortcutUtils {
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
-                .show();
+                .create();
+        dialog.setOnShowListener(d -> {
+            Button neg = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+            if (neg != null) {
+                neg.setTextColor(ContextCompat.getColor(context, R.color.fb_text_secondary));
+            }
+        });
+        dialog.show();
     }
 
     private static void displayNewShortcutCreatorDialog(@NonNull FragmentActivity context, @NonNull ActionItem actionItem) {
@@ -80,11 +100,11 @@ public final class ShortcutUtils {
         for (int i = 0; i < titles.length; ++i) {
             titles[i] = shortcutItems.get(i).name;
         }
-        new MaterialAlertDialogBuilder(context)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.select_shortcuts)
-                .setMultiChoiceItems(titles, null, (dialog, which, isChecked) -> choices[which] = isChecked)
+                .setMultiChoiceItems(titles, null, (d, which, isChecked) -> choices[which] = isChecked)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                .setPositiveButton(android.R.string.ok, (d, which) -> {
                     List<ShortcutItem> selectedItems = new ArrayList<>(choices.length);
                     for (int i = 0; i < choices.length; ++i) {
                         if (choices[i]) {
@@ -95,6 +115,18 @@ public final class ShortcutUtils {
                     }
                     ShortcutUtils.updateShortcuts(context.getApplicationContext(), selectedItems);
                 })
-                .show();
+                .create();
+        dialog.setOnShowListener(d -> {
+            Button pos = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            if (pos != null) {
+                pos.setTextColor(ContextCompat.getColor(context, R.color.fb_blue));
+                pos.setTypeface(null, Typeface.BOLD);
+            }
+            Button neg = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+            if (neg != null) {
+                neg.setTextColor(ContextCompat.getColor(context, R.color.fb_text_secondary));
+            }
+        });
+        dialog.show();
     }
 }

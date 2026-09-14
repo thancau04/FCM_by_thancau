@@ -1,9 +1,12 @@
 package io.github.muntashirakon.setedit;
 
 import android.Manifest;
+import android.app.ActivityManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -16,7 +19,10 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -24,6 +30,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.AppCompatSpinner;
@@ -55,6 +62,8 @@ import io.github.muntashirakon.setedit.shortcut.ShortcutUtils;
 import io.github.muntashirakon.setedit.utils.ActionResult;
 import io.github.muntashirakon.util.UiUtils;
 import me.zhanghai.android.fastscroll.FastScrollerBuilder;
+
+import com.thancau.setedit.R;
 
 public class EditorActivity extends AppCompatActivity implements AdapterView.OnItemSelectedListener,
         SearchView.OnQueryTextListener {
@@ -101,10 +110,17 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
         final SharedPreferences preferences = getPreferences(MODE_PRIVATE);
         boolean hasWarned = preferences.getBoolean("has_warned", false);
         if (hasWarned) return;
-        new MaterialAlertDialogBuilder(this)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setMessage(R.string.startup_warning)
                 .setNegativeButton(R.string.close, null)
-                .show();
+                .create();
+        dialog.setOnShowListener(d -> {
+            Button neg = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+            if (neg != null) {
+                neg.setTextColor(ContextCompat.getColor(this, R.color.fb_text_secondary));
+            }
+        });
+        dialog.show();
         preferences.edit().putBoolean("has_warned", true).apply();
     }
 
@@ -158,6 +174,16 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
         Toast.makeText(this, "AFCM: Đang áp dụng cấu hình từ TC.json…", Toast.LENGTH_SHORT).show();
     }
 
+    /**
+     * Gửi lệnh manual sync tới AutoApplyService (nút SYNC NOW trên header).
+     */
+    private void triggerManualSync() {
+        Intent intent = new Intent(this, AutoApplyService.class);
+        intent.setAction(AutoApplyService.ACTION_APPLY_NOW);
+        ContextCompat.startForegroundService(this, intent);
+        Toast.makeText(this, "Syncing FCM settings...", Toast.LENGTH_SHORT).show();
+    }
+
     // -----------------------------------------------------------------------
     // Dialog thêm item mới
     // -----------------------------------------------------------------------
@@ -175,10 +201,10 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
             performViaShortcut.setVisibility(View.VISIBLE);
         } else performViaShortcut.setVisibility(View.GONE);
         keyNameView.requestFocus();
-        new MaterialAlertDialogBuilder(this)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setView(editorDialogView)
                 .setTitle(R.string.new_item)
-                .setPositiveButton(R.string.save, ((dialog, which) -> {
+                .setPositiveButton(R.string.save, ((d, which) -> {
                     Editable keyName = keyNameView.getText();
                     Editable keyValue = keyValueView.getText();
                     if (TextUtils.isEmpty(keyName) || keyValue == null) return;
@@ -193,7 +219,19 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
                     }
                 }))
                 .setNegativeButton(android.R.string.cancel, null)
-                .show();
+                .create();
+        dialog.setOnShowListener(d -> {
+            Button pos = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            if (pos != null) {
+                pos.setTextColor(ContextCompat.getColor(this, R.color.fb_blue));
+                pos.setTypeface(null, Typeface.BOLD);
+            }
+            Button neg = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+            if (neg != null) {
+                neg.setTextColor(ContextCompat.getColor(this, R.color.fb_text_secondary));
+            }
+        });
+        dialog.show();
     }
 
     // -----------------------------------------------------------------------
@@ -206,6 +244,8 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
         int mode = preferences.getInt("theme", AppCompatDelegate.getDefaultNightMode());
         AppCompatDelegate.setDefaultNightMode(mode);
         super.onCreate(bundle);
+        setTitle("FCM - TC");
+        setTaskDescription(new ActivityManager.TaskDescription("FCM - TC"));
         setContentView(R.layout.activity_editor);
         setSupportActionBar(findViewById(R.id.toolbar));
         ActionBar actionBar = getSupportActionBar();
@@ -217,7 +257,9 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
             // Item view
             spinnerTable = actionBarView.findViewById(R.id.spinner);
             spinnerTable.setOnItemSelectedListener(this);
-            spinnerTable.setAdapter(ArrayAdapter.createFromResource(this, R.array.settings_table, R.layout.item_spinner));
+            ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(this, R.array.settings_table, R.layout.item_spinner);
+            spinnerAdapter.setDropDownViewResource(R.layout.item_spinner_dropdown);
+            spinnerTable.setAdapter(spinnerAdapter);
         }
         // List view
         listView = findViewById(R.id.recycler_view);
@@ -237,6 +279,13 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
             }
         });
         UiUtils.applyWindowInsetsAsMargin(addNewItem);
+
+        // SYNC NOW button handler
+        TextView btnSyncNow = findViewById(R.id.btn_sync_now);
+        if (btnSyncNow != null) {
+            btnSyncNow.setOnClickListener(v -> triggerManualSync());
+        }
+
         // Display warning if it's the first time
         displayOneTimeWarningDialog();
 
@@ -263,8 +312,46 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
         getMenuInflater().inflate(R.menu.activity_editor_actions, menu);
         // Search view
         searchView = (SearchView) menu.findItem(R.id.action_search).getActionView();
-        // Set query listener
-        searchView.setOnQueryTextListener(this);
+        if (searchView != null) {
+            searchView.setOnQueryTextListener(this);
+            searchView.setQueryHint("Search settings...");
+            searchView.setBackgroundResource(R.drawable.bg_search_view);
+            // Search text
+            EditText searchEditText = searchView.findViewById(androidx.appcompat.R.id.search_src_text);
+            if (searchEditText != null) {
+                searchEditText.setTextColor(ContextCompat.getColor(this, R.color.fb_text_primary));
+                searchEditText.setHintTextColor(ContextCompat.getColor(this, R.color.fb_text_hint));
+                searchEditText.setTextSize(14f);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    searchEditText.setTextCursorDrawable(R.drawable.cursor_blue);
+                } else {
+                    try {
+                        java.lang.reflect.Field f = TextView.class.getDeclaredField("mCursorDrawableRes");
+                        f.setAccessible(true);
+                        f.set(searchEditText, R.drawable.cursor_blue);
+                    } catch (Exception ignored) {}
+                }
+            }
+            // Search icon
+            ImageView searchIcon = searchView.findViewById(androidx.appcompat.R.id.search_button);
+            if (searchIcon != null) {
+                searchIcon.setColorFilter(ContextCompat.getColor(this, R.color.fb_text_secondary));
+            }
+            ImageView searchMagIcon = searchView.findViewById(androidx.appcompat.R.id.search_mag_icon);
+            if (searchMagIcon != null) {
+                searchMagIcon.setColorFilter(ContextCompat.getColor(this, R.color.fb_text_secondary));
+            }
+            // Clear / Close icon
+            ImageView closeIcon = searchView.findViewById(androidx.appcompat.R.id.search_close_btn);
+            if (closeIcon != null) {
+                closeIcon.setColorFilter(ContextCompat.getColor(this, R.color.fb_text_secondary));
+            }
+            // Remove default underline in search plate
+            View searchPlate = searchView.findViewById(androidx.appcompat.R.id.search_plate);
+            if (searchPlate != null) {
+                searchPlate.setBackgroundColor(Color.TRANSPARENT);
+            }
+        }
         return super.onCreateOptionsMenu(menu);
     }
 

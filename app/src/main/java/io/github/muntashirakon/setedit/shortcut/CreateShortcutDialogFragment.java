@@ -3,6 +3,7 @@ package io.github.muntashirakon.setedit.shortcut;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -13,11 +14,14 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.drawable.IconCompat;
 import androidx.fragment.app.DialogFragment;
 
@@ -32,7 +36,7 @@ import java.io.InputStream;
 import java.lang.ref.WeakReference;
 
 import io.github.muntashirakon.lifecycle.SoftInputLifeCycleObserver;
-import io.github.muntashirakon.setedit.R;
+import com.thancau.setedit.R;
 import io.github.muntashirakon.setedit.boot.ActionItem;
 
 public class CreateShortcutDialogFragment extends DialogFragment {
@@ -113,10 +117,10 @@ public class CreateShortcutDialogFragment extends DialogFragment {
         mShortcutNameField.setText(mActionItem.name);
         mShortcutNamePreview.setText(mActionItem.name);
 
-        return new MaterialAlertDialogBuilder(requireActivity())
+        AlertDialog dialog = new MaterialAlertDialogBuilder(requireActivity())
                 .setTitle(R.string.create_shortcut)
                 .setView(mDialogView)
-                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                .setPositiveButton(android.R.string.ok, (d, which) -> {
                     if (mValidName) {
                         String name = mShortcutName != null ? mShortcutName : mActionItem.name;
                         CharSequence iconUri = mShortcutIconField.getText();
@@ -130,6 +134,18 @@ public class CreateShortcutDialogFragment extends DialogFragment {
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
+        dialog.setOnShowListener(d -> {
+            Button pos = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            if (pos != null) {
+                pos.setTextColor(ContextCompat.getColor(requireContext(), R.color.fb_blue));
+                pos.setTypeface(null, Typeface.BOLD);
+            }
+            Button neg = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+            if (neg != null) {
+                neg.setTextColor(ContextCompat.getColor(requireContext(), R.color.fb_text_secondary));
+            }
+        });
+        return dialog;
     }
 
 

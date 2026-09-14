@@ -1,6 +1,7 @@
 package io.github.muntashirakon.setedit.adapters;
 
 import android.annotation.SuppressLint;
+import android.graphics.Typeface;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -13,6 +14,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.core.util.Pair;
 import androidx.core.view.MotionEventCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -28,7 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-import io.github.muntashirakon.setedit.R;
+import com.thancau.setedit.R;
 import io.github.muntashirakon.setedit.TableTypeInt;
 import io.github.muntashirakon.setedit.boot.ActionItem;
 import io.github.muntashirakon.setedit.shortcut.ShortcutItem;
@@ -149,14 +151,35 @@ class ShortcutsRecyclerAdapter extends AbsRecyclerAdapter {
                 })
                 .create();
         dialog.setOnShowListener((d) -> {
+            Button pos = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            if (pos != null) {
+                pos.setTextColor(ContextCompat.getColor(context, R.color.fb_blue));
+                pos.setTypeface(null, Typeface.BOLD);
+            }
+            Button neg = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+            if (neg != null) {
+                neg.setTextColor(ContextCompat.getColor(context, R.color.fb_text_secondary));
+            }
             Button deleteButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
-            deleteButton.setOnClickListener(v1 -> {
-                new MaterialAlertDialogBuilder(context)
-                        .setTitle(R.string.delete_shortcut_title)
-                        .setMessage(R.string.delete_shortcut_message)
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show();
-            });
+            if (deleteButton != null) {
+                deleteButton.setTextColor(ContextCompat.getColor(context, R.color.fb_red));
+                deleteButton.setTypeface(null, Typeface.BOLD);
+                deleteButton.setOnClickListener(v1 -> {
+                    AlertDialog deleteDialog = new MaterialAlertDialogBuilder(context)
+                            .setTitle(R.string.delete_shortcut_title)
+                            .setMessage(R.string.delete_shortcut_message)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .create();
+                    deleteDialog.setOnShowListener(dd -> {
+                        Button okBtn = deleteDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                        if (okBtn != null) {
+                            okBtn.setTextColor(ContextCompat.getColor(context, R.color.fb_blue));
+                            okBtn.setTypeface(null, Typeface.BOLD);
+                        }
+                    });
+                    deleteDialog.show();
+                });
+            }
         });
         dialog.show();
     }

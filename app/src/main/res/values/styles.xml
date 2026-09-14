@@ -1,8 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppThemeOverlay" parent="Theme.Material3.Light.NoActionBar">
-        <item name="android:statusBarColor">#99000000</item>
-        <item name="android:navigationBarColor">#99000000</item>
+    <!-- Force dark mode as default with Facebook Dark palette -->
+    <style name="AppThemeOverlay" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:statusBarColor">@color/fb_bg_dark</item>
+        <item name="android:navigationBarColor">@color/fb_bg_dark</item>
+        <item name="android:windowBackground">@color/fb_bg_dark</item>
+        <item name="android:colorBackground">@color/fb_bg_dark</item>
+        <item name="colorPrimary">@color/fb_blue</item>
+        <item name="colorPrimaryVariant">@color/fb_blue</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSurface">@color/fb_card_dark</item>
+        <item name="colorOnSurface">@color/fb_text_primary</item>
+        <item name="colorOnSurfaceVariant">@color/fb_text_secondary</item>
+        <item name="android:textColorPrimary">@color/fb_text_primary</item>
+        <item name="android:textColorSecondary">@color/fb_text_secondary</item>
+        <item name="colorAccent">@color/fb_blue</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.App.MaterialAlertDialog</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.App.MaterialAlertDialog</item>
+        <item name="actionOverflowMenuStyle">@style/App.Widget.ActionOverflowMenu</item>
+        <item name="popupMenuStyle">@style/App.Widget.PopupMenu</item>
+        <item name="android:textCursorDrawable">@drawable/cursor_blue</item>
+        <item name="colorCursor">@color/fb_blue</item>
     </style>
 
     <style name="AppTheme" parent="AppThemeOverlay">
@@ -10,6 +28,68 @@
         <item name="android:windowContentTransitions">true</item>
         <item name="android:windowAllowEnterTransitionOverlap">true</item>
         <item name="android:windowAllowReturnTransitionOverlap">true</item>
+    </style>
+
+    <!-- Facebook Dark Dialog Theme -->
+    <style name="ThemeOverlay.App.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="android:background">@color/fb_card_dark</item>
+        <item name="colorSurface">@color/fb_card_dark</item>
+        <item name="colorOnSurface">@color/fb_text_primary</item>
+        <item name="colorOnSurfaceVariant">@color/fb_text_secondary</item>
+        <item name="android:textColorPrimary">@color/fb_text_primary</item>
+        <item name="android:textColorSecondary">@color/fb_text_secondary</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.AppTheme.Dialog</item>
+        <item name="materialAlertDialogTitleTextStyle">@style/App.Dialog.Title</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/App.Dialog.Body</item>
+        <item name="buttonBarPositiveButtonStyle">@style/App.Dialog.Button.Positive</item>
+        <item name="buttonBarNegativeButtonStyle">@style/App.Dialog.Button.Negative</item>
+        <item name="buttonBarNeutralButtonStyle">@style/App.Dialog.Button.Neutral</item>
+    </style>
+
+    <style name="App.Dialog.Title" parent="MaterialAlertDialog.Material3.Title.Text">
+        <item name="android:textColor">@color/fb_text_primary</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <style name="App.Dialog.Body" parent="MaterialAlertDialog.Material3.Body.Text">
+        <item name="android:textColor">@color/fb_text_secondary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="App.Dialog.Button.Positive" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/fb_blue</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="App.Dialog.Button.Negative" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/fb_text_secondary</item>
+    </style>
+
+    <style name="App.Dialog.Button.Neutral" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/fb_red</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Toolbar Popup / Overflow Menu -->
+    <style name="App.ThemeOverlay.ToolbarMenu" parent="ThemeOverlay.Material3.Dark">
+        <item name="android:colorBackground">@color/fb_card_dark</item>
+        <item name="colorSurface">@color/fb_card_dark</item>
+        <item name="android:textColorPrimary">@color/fb_text_primary</item>
+        <item name="android:textColor">@color/fb_text_primary</item>
+        <item name="android:itemBackground">@drawable/menu_item_bg</item>
+    </style>
+
+    <style name="App.Widget.ActionOverflowMenu" parent="Widget.Material3.PopupMenu.Overflow">
+        <item name="android:popupBackground">@color/fb_card_dark</item>
+    </style>
+
+    <style name="App.Widget.PopupMenu" parent="Widget.Material3.PopupMenu">
+        <item name="android:popupBackground">@color/fb_card_dark</item>
+    </style>
+
+    <style name="ShapeAppearance.AppTheme.Dialog" parent="">
+        <item name="cornerSize">12dp</item>
     </style>
 
     <style name="ShapeAppearance.AppTheme.CircleComponent" parent="">
