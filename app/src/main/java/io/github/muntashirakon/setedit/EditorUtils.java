@@ -11,10 +11,12 @@ import android.os.Process;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.core.util.Pair;
 
@@ -25,6 +27,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.List;
+
+import com.thancau.setedit.BuildConfig;
+import com.thancau.setedit.R;
 
 public class EditorUtils {
     /**
@@ -67,10 +72,17 @@ public class EditorUtils {
         tv.setKeyListener(null);
         tv.setSelectAllOnFocus(true);
         tv.requestFocus();
-        new MaterialAlertDialogBuilder(context)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                 .setView(view)
                 .setNegativeButton(R.string.close, null)
-                .show();
+                .create();
+        dialog.setOnShowListener(d -> {
+            Button neg = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+            if (neg != null) {
+                neg.setTextColor(ContextCompat.getColor(context, R.color.fb_text_secondary));
+            }
+        });
+        dialog.show();
     }
 
     @NonNull

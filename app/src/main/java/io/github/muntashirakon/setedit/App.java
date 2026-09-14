@@ -12,6 +12,8 @@ import androidx.core.view.WindowCompat;
 import com.google.android.material.color.DynamicColors;
 import com.topjohnwu.superuser.Shell;
 
+import com.thancau.setedit.BuildConfig;
+
 public class App extends Application {
     static {
         // Set settings before the main shell can be created

@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "io.github.muntashirakon.setedit"
+    namespace "com.thancau.setedit"
     compileSdk 34
 
     defaultConfig {
@@ -14,12 +14,21 @@ android {
         resConfig "en"
     }
 
+    Properties localProps = new Properties()
+    File localPropsFile = project.rootProject.file('local.properties')
+    if (localPropsFile.exists()) {
+        localPropsFile.withInputStream { localProps.load(it) }
+    }
+
     signingConfigs {
         debug {
-            storeFile file('dev_keystore.jks')
-            storePassword 'kJCp!Bda#PBdN2RLK%yMK@hatq&69E'
-            keyPassword 'kJCp!Bda#PBdN2RLK%yMK@hatq&69E'
-            keyAlias 'key0'
+            File keystoreFile = file('dev_keystore.jks')
+            if (keystoreFile.exists()) {
+                storeFile keystoreFile
+                storePassword System.getenv("KEYSTORE_PASSWORD") ?: localProps.getProperty('keystore.password', '')
+                keyPassword System.getenv("KEY_PASSWORD") ?: localProps.getProperty('key.password', '')
+                keyAlias System.getenv("KEY_ALIAS") ?: localProps.getProperty('key.alias', 'key0')
+            }
         }
     }
 
@@ -54,7 +63,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
-            signingConfig signingConfigs.debug
+            File keystoreFile = file('dev_keystore.jks')
+            String kPass = System.getenv("KEYSTORE_PASSWORD") ?: localProps.getProperty('keystore.password', '')
+            if (keystoreFile.exists() && !kPass.isEmpty()) {
+                signingConfig signingConfigs.debug
+            }
         }
     }
     compileOptions {

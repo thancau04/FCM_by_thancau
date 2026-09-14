@@ -2,12 +2,14 @@ package io.github.muntashirakon.setedit.adapters;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.text.Editable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.Filter;
 import android.widget.TextView;
 
@@ -25,7 +27,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import java.util.List;
 
 import io.github.muntashirakon.setedit.EditorUtils;
-import io.github.muntashirakon.setedit.R;
+import com.thancau.setedit.R;
 import io.github.muntashirakon.setedit.TableTypeInt;
 import io.github.muntashirakon.setedit.boot.ActionItem;
 import io.github.muntashirakon.setedit.boot.BootUtils;
@@ -113,7 +115,6 @@ public abstract class AbsRecyclerAdapter extends RecyclerView.Adapter<AbsRecycle
     private void onBindViewHolder(@NonNull ViewHolder holder, String keyName, String keyValue, int position) {
         holder.keyName.setText(keyName);
         holder.keyValue.setText(keyValue);
-        holder.itemView.setBackgroundColor(ContextCompat.getColor(context, position % 2 == 1 ? android.R.color.transparent : R.color.semi_transparent));
         holder.itemView.setOnClickListener(v -> onClickItem(v, keyName, keyValue, position));
     }
 
@@ -168,6 +169,20 @@ public abstract class AbsRecyclerAdapter extends RecyclerView.Adapter<AbsRecycle
         }
         AlertDialog dialog = builder.create();
         dialog.setOnShowListener(dialogInterface -> {
+            Button pos = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            if (pos != null) {
+                pos.setTextColor(ContextCompat.getColor(context, R.color.fb_blue));
+                pos.setTypeface(null, Typeface.BOLD);
+            }
+            Button neg = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+            if (neg != null) {
+                neg.setTextColor(ContextCompat.getColor(context, R.color.fb_text_secondary));
+            }
+            Button neu = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+            if (neu != null) {
+                neu.setTextColor(ContextCompat.getColor(context, R.color.fb_red));
+                neu.setTypeface(null, Typeface.BOLD);
+            }
             if (canEdit()) {
                 editText.requestFocus();
                 editText.requestFocusFromTouch();
@@ -184,10 +199,17 @@ public abstract class AbsRecyclerAdapter extends RecyclerView.Adapter<AbsRecycle
     }
 
     protected void setMessage(CharSequence charSequence) {
-        new MaterialAlertDialogBuilder(context)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                 .setMessage(charSequence)
                 .setNegativeButton(R.string.close, null)
-                .show();
+                .create();
+        dialog.setOnShowListener(d -> {
+            Button neg = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+            if (neg != null) {
+                neg.setTextColor(ContextCompat.getColor(context, R.color.fb_text_secondary));
+            }
+        });
+        dialog.show();
     }
 
     private void openHelp(String keyName) {

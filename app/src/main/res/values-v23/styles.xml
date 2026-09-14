@@ -1,8 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppThemeOverlay" parent="Theme.Material3.Light.NoActionBar">
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">#99000000</item>
+    <style name="AppThemeOverlay" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@color/fb_bg_dark</item>
+        <item name="android:navigationBarColor">@color/fb_bg_dark</item>
+        <item name="android:windowBackground">@color/fb_bg_dark</item>
+        <item name="android:colorBackground">@color/fb_bg_dark</item>
+        <item name="colorPrimary">@color/fb_blue</item>
+        <item name="colorSurface">@color/fb_card_dark</item>
+        <item name="colorOnSurface">@color/fb_text_primary</item>
+        <item name="colorOnSurfaceVariant">@color/fb_text_secondary</item>
+        <item name="android:textColorPrimary">@color/fb_text_primary</item>
+        <item name="android:textColorSecondary">@color/fb_text_secondary</item>
+        <item name="colorAccent">@color/fb_blue</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.App.MaterialAlertDialog</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.App.MaterialAlertDialog</item>
+        <item name="android:textCursorDrawable">@drawable/cursor_blue</item>
+        <item name="colorCursor">@color/fb_blue</item>
     </style>
 </resources>

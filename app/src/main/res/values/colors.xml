@@ -1,4 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="semi_transparent">#10000000</color>
+
+    <!-- Facebook Dark Mode Palette -->
+    <color name="fb_bg_dark">#18191A</color>
+    <color name="fb_card_dark">#242526</color>
+    <color name="fb_divider">#3A3B3C</color>
+    <color name="fb_blue">#2D88FF</color>
+    <color name="fb_text_primary">#E4E6EB</color>
+    <color name="fb_text_secondary">#B0B3B8</color>
+    <color name="fb_text_hint">#8A8D91</color>
+    <color name="fb_red">#FA383E</color>
+    <color name="fb_green">#31A24C</color>
+    <color name="fb_ripple">#3A3B3C</color>
+    <color name="fb_input_bg">#18191A</color>
 </resources>

@@ -3,46 +3,63 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/fb_card_dark">
 
     <androidx.appcompat.widget.LinearLayoutCompat
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingVertical="8dp"
-        android:paddingHorizontal="16dp">
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp">
 
         <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/name"
+            android:textColorHint="@color/fb_text_hint"
+            app:boxBackgroundColor="@color/fb_input_bg"
+            app:boxStrokeColor="@color/box_stroke_selector"
             app:hintAnimationEnabled="true"
-            app:hintEnabled="true">
+            app:hintEnabled="true"
+            app:hintTextColor="@color/fb_blue">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/shortcut_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:singleLine="true"
+                android:textColor="@color/fb_text_primary"
+                android:textColorHint="@color/fb_text_hint"
                 tools:text="@tools:sample/full_names" />
 
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:hint="@string/shortcut_icon"
-            app:endIconMode="custom"
-            app:endIconDrawable="@drawable/ic_icon_picker"
+            android:textColorHint="@color/fb_text_hint"
+            app:boxBackgroundColor="@color/fb_input_bg"
+            app:boxStrokeColor="@color/box_stroke_selector"
             app:endIconContentDescription="@string/pick_icon"
+            app:endIconDrawable="@drawable/ic_icon_picker"
+            app:endIconMode="custom"
+            app:endIconTint="@color/fb_blue"
             app:hintAnimationEnabled="true"
-            app:hintEnabled="true">
+            app:hintEnabled="true"
+            app:hintTextColor="@color/fb_blue">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/insert_icon"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:singleLine="true"
+                android:textColor="@color/fb_text_primary"
+                android:textColorHint="@color/fb_text_hint"
                 tools:text="@tools:sample/full_names" />
 
         </com.google.android.material.textfield.TextInputLayout>
@@ -52,20 +69,20 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="8dp"
-            android:padding="16dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/dashed_border"
             android:orientation="vertical"
-            android:background="@drawable/dashed_border">
+            android:padding="16dp">
 
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/icon"
-                android:layout_width="200dp"
-                android:layout_height="200dp"
+                android:layout_width="160dp"
+                android:layout_height="160dp"
                 android:layout_gravity="center"
-                android:scaleType="fitCenter"
                 android:adjustViewBounds="true"
-                android:minHeight="200dp"
-                android:minWidth="200dp"
+                android:minWidth="160dp"
+                android:minHeight="160dp"
+                android:scaleType="fitCenter"
                 app:shapeAppearanceOverlay="@style/ShapeAppearance.AppTheme.CircleComponent"
                 app:srcCompat="@drawable/ic_launcher_foreground" />
 
@@ -73,10 +90,13 @@
                 android:id="@+id/name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_horizontal"
-                android:layout_marginTop="16dp"
-                android:maxLines="1"
+                android:layout_marginTop="12dp"
                 android:ellipsize="end"
+                android:gravity="center_horizontal"
+                android:maxLines="1"
+                android:textColor="@color/fb_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold"
                 tools:text="@tools:sample/lorem[4]" />
 
         </androidx.appcompat.widget.LinearLayoutCompat>

@@ -19,7 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-import io.github.muntashirakon.setedit.R;
+import com.thancau.setedit.R;
 import io.github.muntashirakon.setedit.SettingsType;
 import io.github.muntashirakon.setedit.TableTypeInt;
 import io.github.muntashirakon.setedit.cursor.SettingsCursor;

@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Locale;
 
 import io.github.muntashirakon.setedit.Native;
-import io.github.muntashirakon.setedit.R;
+import com.thancau.setedit.R;
 import io.github.muntashirakon.setedit.TableTypeInt;
 import io.github.muntashirakon.setedit.utils.ActionResult;
 import io.github.muntashirakon.setedit.utils.AndroidPropertyUtils;

@@ -1,48 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:tools="http://schemas.android.com/tools"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    android:background="@color/fb_card_dark">
 
     <androidx.appcompat.widget.LinearLayoutCompat
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingHorizontal="16dp"
-        android:paddingTop="16dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:paddingTop="16dp">
 
         <androidx.appcompat.widget.LinearLayoutCompat
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="16dp"
+            android:orientation="horizontal">
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/title"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
+                android:layout_gravity="center_vertical"
                 android:layout_weight="1"
                 android:textIsSelectable="true"
-                android:textStyle="normal"
-                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/fb_text_primary"
                 tools:text="@tools:sample/lorem[2]" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_help"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:layout_gravity="center"
+                android:layout_gravity="center_vertical"
                 android:layout_weight="0"
-                app:icon="@drawable/ic_outline_help_outline_24"
-                app:iconPadding="0dp"
-                app:iconGravity="textStart"
-                app:iconTint="?attr/colorAccent"
-                app:iconSize="30dp"
-                android:text="@null"
                 android:background="?selectableItemBackgroundBorderless"
-                android:contentDescription="@string/help" />
+                android:contentDescription="@string/help"
+                android:text="@null"
+                app:icon="@drawable/ic_outline_help_outline_24"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="28dp"
+                app:iconTint="@color/fb_blue"
+                app:rippleColor="@color/fb_ripple" />
 
         </androidx.appcompat.widget.LinearLayoutCompat>
 
@@ -51,14 +54,22 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/value"
+            android:textColorHint="@color/fb_text_hint"
+            app:boxBackgroundColor="@color/fb_bg_dark"
+            app:boxStrokeColor="@color/box_stroke_selector"
             app:hintAnimationEnabled="true"
-            app:hintEnabled="true">
+            app:hintEnabled="true"
+            app:hintTextColor="@color/fb_blue">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/txt"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textMultiLine"
+                android:textColor="@color/fb_text_primary"
+                android:textColorHighlight="@color/fb_blue"
+                android:textColorHint="@color/fb_text_hint"
+                android:textCursorDrawable="@drawable/cursor_blue"
                 android:textIsSelectable="true"
                 tools:text="@tools:sample/lorem[7]" />
 
@@ -68,13 +79,20 @@
             android:id="@+id/checkbox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/perform_this_action_on_reboot" />
+            android:layout_marginTop="8dp"
+            android:text="@string/perform_this_action_on_reboot"
+            android:textColor="@color/fb_text_primary"
+            app:buttonTint="@color/fb_blue"
+            app:rippleColor="@color/fb_ripple" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/checkbox_2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/perform_this_action_via_shortcut" />
+            android:text="@string/perform_this_action_via_shortcut"
+            android:textColor="@color/fb_text_primary"
+            app:buttonTint="@color/fb_blue"
+            app:rippleColor="@color/fb_ripple" />
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 

@@ -1,9 +1,49 @@
+# Gradle and build files
+.gradle/
+build/
+**/build/
+.cxx/
+.externalNativeBuild/
+
+# Local configuration files
+local.properties
+.navigation/
+
+# Android Studio & IntelliJ IDEA
 *.iml
-.gradle
-/local.properties
-/.idea
+.idea/
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+captures/
+Captures/
+
+# Visual Studio Code
+.vscode/
+
+# Keystores & security certificates
+*.jks
+*.keystore
+*.p12
+*.key
+*.pem
+
+# Output binary files
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# Log files
+*.log
+
+# OS & temporary files
+Thumbs.db
+ehthumbs.db
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes

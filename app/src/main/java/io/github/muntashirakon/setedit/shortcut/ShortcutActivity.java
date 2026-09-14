@@ -12,7 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import io.github.muntashirakon.setedit.R;
+import com.thancau.setedit.R;
 import io.github.muntashirakon.setedit.boot.ActionItem;
 import io.github.muntashirakon.setedit.boot.BootUtils;
 import io.github.muntashirakon.setedit.utils.ActionResult;

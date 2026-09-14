@@ -1,31 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:tools="http://schemas.android.com/tools">
+    android:background="@color/fb_card_dark">
 
     <androidx.appcompat.widget.LinearLayoutCompat
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingHorizontal="16dp"
-        android:paddingTop="16dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:paddingTop="16dp">
 
         <androidx.appcompat.widget.LinearLayoutCompat
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="16dp"
+            android:orientation="horizontal">
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
+                android:layout_gravity="center_vertical"
                 android:layout_weight="1"
+                android:textColor="@color/fb_text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold"
                 android:textIsSelectable="true"
-                android:textStyle="normal"
-                android:textAppearance="?android:attr/textAppearanceLarge"
                 tools:text="@tools:sample/lorem[2]" />
 
         </androidx.appcompat.widget.LinearLayoutCompat>
@@ -34,6 +36,7 @@
             android:id="@+id/recycler_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@color/fb_card_dark"
             android:scrollbars="vertical" />
 
     </androidx.appcompat.widget.LinearLayoutCompat>
