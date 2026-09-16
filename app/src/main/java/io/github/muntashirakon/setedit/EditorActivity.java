@@ -80,6 +80,7 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
     private AbsRecyclerAdapter adapter;
     private RecyclerView listView;
     private SharedPreferences preferences;
+    private Timer refreshTimer;
 
     // Launcher lưu file JSON
     private final ActivityResultLauncher<String> post21SaveLauncher = registerForActivityResult(
@@ -295,12 +296,25 @@ public class EditorActivity extends AppCompatActivity implements AdapterView.OnI
         startAutoApplyService();
 
         // Refresh settings after 5 seconds
-        new Timer().schedule(new TimerTask() {
+        refreshTimer = new Timer();
+        refreshTimer.schedule(new TimerTask() {
             @Override
             public void run() {
-                runOnUiThread(() -> adapter.refresh());
+                runOnUiThread(() -> {
+                    if (adapter != null) adapter.refresh();
+                });
             }
         }, 5000, 5000);
+    }
+
+    @Override
+    protected void onDestroy() {
+        // Hủy Timer tránh leak Activity reference
+        if (refreshTimer != null) {
+            refreshTimer.cancel();
+            refreshTimer = null;
+        }
+        super.onDestroy();
     }
 
     // -----------------------------------------------------------------------
