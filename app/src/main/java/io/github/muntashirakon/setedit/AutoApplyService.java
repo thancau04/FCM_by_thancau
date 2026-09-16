@@ -39,6 +39,7 @@ import java.util.Iterator;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -92,7 +93,10 @@ public class AutoApplyService extends Service {
     private NotificationManager notificationManager;
     private NotificationCompat.Builder notificationBuilder;
     private Handler mainHandler;
-    private FileObserver fileObserver;
+    private volatile FileObserver fileObserver;
+
+    /** Cờ chống chạy đồng thời executeApplySettings (race condition guard). */
+    private final AtomicBoolean isSyncing = new AtomicBoolean(false);
 
     private final AtomicLong lastScreenExecuteTime = new AtomicLong(0L);
     private final AtomicLong lastFileExecuteTime = new AtomicLong(0L);
@@ -199,30 +203,32 @@ public class AutoApplyService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent == null)
-            return START_STICKY;
-
-        // Xử lý Heartbeat Watchdog trigger từ AlarmManager
-        if ("heartbeat_watchdog".equals(intent.getStringExtra("trigger"))) {
-            Log.d(TAG, "Heartbeat watchdog 15m triggered.");
-            executeApplySettings("heartbeat_watchdog");
-            return START_STICKY;
-        }
-
-        String action = intent.getAction();
-        if (ACTION_APPLY_NOW.equals(action)) {
-            executeApplySettings("manual");
-        } else if (ACTION_BOOT_APPLY.equals(action)) {
+        // Xác định trigger: ưu tiên extra "trigger", fallback theo action, mặc định "manual_sync"
+        String trigger = "manual_sync";
+        if (intent != null && intent.getStringExtra("trigger") != null) {
+            trigger = intent.getStringExtra("trigger");
+        } else if (intent != null && ACTION_BOOT_APPLY.equals(intent.getAction())) {
+            // Boot apply cần xử lý riêng vì có retry logic
             int retryCount = intent.getIntExtra("retry_count", 0);
+            Log.i(TAG, "onStartCommand triggered with action: boot_apply (retry=" + retryCount + ")");
             scheduleBootApply(retryCount);
+            return START_STICKY;
+        } else if (intent != null && ACTION_APPLY_NOW.equals(intent.getAction())) {
+            trigger = "manual_sync";
         }
+
+        Log.i(TAG, "onStartCommand triggered with action: " + trigger);
+        executeApplySettings(trigger);
         return START_STICKY;
     }
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         super.onTaskRemoved(rootIntent);
-        // Không dừng service, đảm bảo tiến trình ngầm tiếp tục duy trì notification
+        // Cập nhật notification khi user thoát app — service vẫn chạy ngầm
+        String timeStr = new SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                .format(new Date());
+        updateNotification("thancau: Đang bảo vệ hệ thống • " + timeStr + " (nền)");
     }
 
     @Override
@@ -254,11 +260,16 @@ public class AutoApplyService extends Service {
 
         // 4. Shutdown executor
         try {
-            if (executor != null)
+            if (executor != null) {
                 executor.shutdownNow();
+                executor = null;
+            }
         } catch (Exception e) {
             Log.w(TAG, "Executor shutdown error", e);
         }
+
+        // 5. Null-out mainHandler để tránh post lên dead handler
+        mainHandler = null;
 
         super.onDestroy();
     }
@@ -343,113 +354,135 @@ public class AutoApplyService extends Service {
     // -----------------------------------------------------------------------
 
     private void executeApplySettings(String trigger) {
+        // Guard: executor đã shutdown (service đang bị destroy)
+        if (executor == null || executor.isShutdown()) {
+            Log.w(TAG, "executeApplySettings bỏ qua: executor đã shutdown.");
+            return;
+        }
+
         executor.submit(() -> {
-            Log.i(TAG, "executeApplySettings — trigger: " + trigger);
-            updateNotification("Đang nạp cấu hình…");
-
-            File jsonFile = new File(
-                    Environment.getExternalStorageDirectory(), AFCM_DIR + "/" + JSON_FILENAME);
-
-            // Safe Guard: file không tồn tại hoặc không đọc được
-            if (!jsonFile.exists() || !jsonFile.canRead()) {
-                Log.w(TAG, "Cảnh báo: File TC.json không hợp lệ hoặc bị xóa, giữ nguyên giá trị hệ thống hiện tại.");
-                updateNotification("thancau: Cảnh báo file TC.json lỗi cú pháp");
-                scheduleHeartbeatWatchdog();
+            // Race condition guard: chỉ cho phép 1 lượt sync tại một thời điểm
+            if (!isSyncing.compareAndSet(false, true)) {
+                Log.w(TAG, "executeApplySettings bỏ qua: đang có lượt sync khác chạy (trigger=" + trigger + ")");
                 return;
             }
 
             try {
-                byte[] bytes = Files.readAllBytes(jsonFile.toPath());
-                String content = new String(bytes, StandardCharsets.UTF_8).trim();
+                Log.i(TAG, "executeApplySettings — trigger: " + trigger);
+                updateNotification("Đang nạp cấu hình…");
 
-                // Safe Guard: file rỗng
-                if (content.isEmpty()) {
+                File jsonFile = new File(
+                        Environment.getExternalStorageDirectory(), AFCM_DIR + "/" + JSON_FILENAME);
+
+                // Safe Guard: file không tồn tại hoặc không đọc được
+                if (!jsonFile.exists() || !jsonFile.canRead()) {
                     Log.w(TAG, "Cảnh báo: File TC.json không hợp lệ hoặc bị xóa, giữ nguyên giá trị hệ thống hiện tại.");
                     updateNotification("thancau: Cảnh báo file TC.json lỗi cú pháp");
-                    scheduleHeartbeatWatchdog();
                     return;
                 }
 
-                JSONObject jsonObject = new JSONObject(content);
+                try {
+                    byte[] bytes = Files.readAllBytes(jsonFile.toPath());
+                    String content = new String(bytes, StandardCharsets.UTF_8).trim();
 
-                int successCount = 0;
-                int skippedCount = 0;
-                int totalKeys = jsonObject.length();
-
-                Iterator<String> keys = jsonObject.keys();
-                while (keys.hasNext()) {
-                    String key = keys.next();
-                    try {
-                        String rawValue = jsonObject.getString(key);
-
-                        // Sanitize: loại bỏ khoảng trắng thừa quanh dấu phẩy
-                        String cleanVal = rawValue.replaceAll("\\s*,\\s*", ",");
-
-                        // Dirty-check kép: đọc giá trị hiện tại từ cả hai bảng
-                        String curSys = Settings.System.getString(getContentResolver(), key);
-                        String curGlob = Settings.Global.getString(getContentResolver(), key);
-
-                        boolean needWriteSys = !cleanVal.equals(curSys);
-                        boolean needWriteGlob = !cleanVal.equals(curGlob);
-
-                        if (!needWriteSys && !needWriteGlob) {
-                            // Cả hai bảng đã khớp — bỏ qua để tránh kích hoạt ContentObserver
-                            Log.d(TAG, "Dirty-check skip: " + key);
-                            skippedCount++;
-                            continue;
-                        }
-
-                        // Ghi Settings.System nếu cần (targetSdk 22 không bị runtime block)
-                        if (needWriteSys) {
-                            try {
-                                Settings.System.putString(getContentResolver(), key, cleanVal);
-                                Log.d(TAG, "System write OK: " + key + " = " + cleanVal);
-                            } catch (Exception ignored) {
-                                Log.w(TAG, "System write FAIL: " + key);
-                            }
-                        }
-
-                        // Ghi Settings.Global nếu cần (WRITE_SECURE_SETTINGS)
-                        if (needWriteGlob) {
-                            try {
-                                Settings.Global.putString(getContentResolver(), key, cleanVal);
-                                Log.d(TAG, "Global write OK: " + key + " = " + cleanVal);
-                            } catch (Exception ignored) {
-                                Log.w(TAG, "Global write FAIL: " + key);
-                            }
-                        }
-
-                        successCount++;
-
-                    } catch (Exception e) {
-                        Log.e(TAG, "Lỗi xử lý key: " + key, e);
+                    // Safe Guard: file rỗng
+                    if (content.isEmpty()) {
+                        Log.w(TAG, "Cảnh báo: File TC.json không hợp lệ hoặc bị xóa, giữ nguyên giá trị hệ thống hiện tại.");
+                        updateNotification("thancau: Cảnh báo file TC.json lỗi cú pháp");
+                        return;
                     }
+
+                    JSONObject jsonObject = new JSONObject(content);
+
+                    int successCount = 0;
+                    int skippedCount = 0;
+                    int totalKeys = jsonObject.length();
+
+                    Iterator<String> keys = jsonObject.keys();
+                    while (keys.hasNext()) {
+                        String key = keys.next();
+                        try {
+                            String rawValue = jsonObject.getString(key);
+
+                            // Sanitize: loại bỏ khoảng trắng thừa quanh dấu phẩy
+                            String cleanVal = rawValue.replaceAll("\\s*,\\s*", ",");
+
+                            // Dirty-check kép: đọc giá trị hiện tại từ cả hai bảng
+                            String curSys = Settings.System.getString(getContentResolver(), key);
+                            String curGlob = Settings.Global.getString(getContentResolver(), key);
+
+                            boolean needWriteSys = !cleanVal.equals(curSys);
+                            boolean needWriteGlob = !cleanVal.equals(curGlob);
+
+                            if (!needWriteSys && !needWriteGlob) {
+                                // Cả hai bảng đã khớp — bỏ qua để tránh kích hoạt ContentObserver
+                                Log.d(TAG, "Dirty-check skip: " + key);
+                                skippedCount++;
+                                continue;
+                            }
+
+                            // Ghi Settings.System nếu cần (targetSdk 22 không bị runtime block)
+                            if (needWriteSys) {
+                                try {
+                                    Settings.System.putString(getContentResolver(), key, cleanVal);
+                                    Log.d(TAG, "System write OK: " + key + " = " + cleanVal);
+                                } catch (SecurityException se) {
+                                    Log.w(TAG, "System write BLOCKED (SecurityException): " + key, se);
+                                } catch (Exception e) {
+                                    Log.w(TAG, "System write FAIL: " + key, e);
+                                }
+                            }
+
+                            // Ghi Settings.Global nếu cần (WRITE_SECURE_SETTINGS)
+                            if (needWriteGlob) {
+                                try {
+                                    Settings.Global.putString(getContentResolver(), key, cleanVal);
+                                    Log.d(TAG, "Global write OK: " + key + " = " + cleanVal);
+                                } catch (SecurityException se) {
+                                    Log.w(TAG, "Global write BLOCKED (SecurityException): " + key, se);
+                                } catch (Exception e) {
+                                    Log.w(TAG, "Global write FAIL: " + key, e);
+                                }
+                            }
+
+                            successCount++;
+
+                        } catch (Exception e) {
+                            Log.e(TAG, "Lỗi xử lý key: " + key, e);
+                        }
+                    }
+
+                    // Cập nhật thông báo: "thancau: Đang bảo vệ N keys • HH:mm:ss"
+                    String timeStr = new SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                            .format(new Date());
+                    String statusText = "thancau: Đang bảo vệ " + totalKeys + " keys • " + timeStr;
+                    if (successCount > 0) {
+                        statusText += " (cập nhật " + successCount + ")";
+                    }
+
+                    Log.i(TAG, statusText);
+                    updateNotification(statusText);
+
+                    // Toast chỉ hiển thị cho trigger từ người dùng (tránh spam mỗi 15 phút)
+                    if ("manual_sync".equals(trigger) || "manual".equals(trigger)) {
+                        showToast(statusText);
+                    }
+
+                } catch (JSONException e) {
+                    // Safe Guard: lỗi cú pháp JSON — KHÔNG crash, KHÔNG xóa/ghi đè keys
+                    Log.w(TAG, "Cảnh báo: File TC.json không hợp lệ hoặc bị xóa, giữ nguyên giá trị hệ thống hiện tại.", e);
+                    updateNotification("thancau: Cảnh báo file TC.json lỗi cú pháp");
+                } catch (IOException e) {
+                    // Safe Guard: lỗi đọc file — KHÔNG crash, KHÔNG xóa/ghi đè keys
+                    Log.w(TAG, "Cảnh báo: File TC.json không hợp lệ hoặc bị xóa, giữ nguyên giá trị hệ thống hiện tại.", e);
+                    updateNotification("thancau: Cảnh báo file TC.json lỗi cú pháp");
                 }
-
-                // Cập nhật thông báo: "thancau: Đang bảo vệ N keys • HH:mm:ss"
-                String timeStr = new SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                        .format(new Date());
-                String statusText = "thancau: Đang bảo vệ " + totalKeys + " keys • " + timeStr;
-                if (successCount > 0) {
-                    statusText += " (cập nhật " + successCount + ")";
-                }
-
-                Log.i(TAG, statusText);
-                updateNotification(statusText);
-                showToast(statusText);
-
-            } catch (JSONException e) {
-                // Safe Guard: lỗi cú pháp JSON — KHÔNG crash, KHÔNG xóa/ghi đè keys
-                Log.w(TAG, "Cảnh báo: File TC.json không hợp lệ hoặc bị xóa, giữ nguyên giá trị hệ thống hiện tại.", e);
-                updateNotification("thancau: Cảnh báo file TC.json lỗi cú pháp");
-            } catch (IOException e) {
-                // Safe Guard: lỗi đọc file — KHÔNG crash, KHÔNG xóa/ghi đè keys
-                Log.w(TAG, "Cảnh báo: File TC.json không hợp lệ hoặc bị xóa, giữ nguyên giá trị hệ thống hiện tại.", e);
-                updateNotification("thancau: Cảnh báo file TC.json lỗi cú pháp");
+            } finally {
+                // Luôn trượt lùi watchdog 15 phút sau mỗi lần executeApplySettings hoàn tất
+                scheduleHeartbeatWatchdog();
+                // Giải phóng cờ syncing
+                isSyncing.set(false);
             }
-
-            // Luôn trượt lùi watchdog 15 phút sau mỗi lần executeApplySettings hoàn tất
-            scheduleHeartbeatWatchdog();
         });
     }
 
@@ -507,16 +540,29 @@ public class AutoApplyService extends Service {
 
     /** Cập nhật Notification từ bất kỳ luồng nào (thread-safe). */
     private void updateNotification(String statusText) {
-        mainHandler.post(() -> {
+        Handler handler = mainHandler;
+        if (handler == null) return;
+        handler.post(() -> {
             if (notificationBuilder == null || notificationManager == null)
                 return;
-            notificationBuilder.setContentText(statusText);
-            notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+            try {
+                notificationBuilder.setContentText(statusText);
+                notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+            } catch (SecurityException e) {
+                // Android 13+: quyền POST_NOTIFICATIONS chưa được cấp — bỏ qua an toàn
+                Log.w(TAG, "Notification bị chặn do thiếu quyền POST_NOTIFICATIONS", e);
+            }
         });
     }
 
-    /** Hiển thị Toast an toàn từ luồng nền. */
+    /** Hiển thị Toast an toàn từ luồng nền (cross-process safe). */
     private void showToast(String message) {
-        mainHandler.post(() -> Toast.makeText(AutoApplyService.this, message, Toast.LENGTH_SHORT).show());
+        new Handler(Looper.getMainLooper()).post(() -> {
+            try {
+                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                Log.w(TAG, "Toast hiển thị thất bại", e);
+            }
+        });
     }
 }
