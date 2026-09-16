@@ -1,8 +1,10 @@
 package io.github.muntashirakon.setedit;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -15,6 +17,7 @@ import android.os.FileObserver;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
@@ -54,7 +57,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * - ACTION_SCREEN_OFF : BroadcastReceiver nội bộ (debounce 2000ms)
  * - POWER_CONNECTED / POWER_DISCONNECTED : cắm/rút sạc
  * - FileObserver : CLOSE_WRITE/MODIFY trên TC.json (debounce 1500ms)
- * - Heartbeat : kiểm tra định kỳ mỗi 30 phút
+ * - Heartbeat Watchdog : Sliding Watchdog Timer 15 phút (one-shot AlarmManager,
+ *                        tự trượt lùi sau mỗi sự kiện)
  */
 public class AutoApplyService extends Service {
 
@@ -74,8 +78,11 @@ public class AutoApplyService extends Service {
     private static final long SCREEN_DEBOUNCE_MS = 2000L;
     private static final long FILE_DEBOUNCE_MS = 1500L;
 
-    /** Chu kỳ Heartbeat: 30 phút (1_800_000ms) */
-    private static final long HEARTBEAT_INTERVAL_MS = 30 * 60 * 1000L;
+    /** Chu kỳ Heartbeat Watchdog: 15 phút (900_000ms) — Sliding Watchdog Timer */
+    private static final long HEARTBEAT_INTERVAL = 15 * 60 * 1000L;
+
+    /** Request code cho PendingIntent Heartbeat Watchdog */
+    private static final int HEARTBEAT_REQUEST_CODE = 1001;
 
     // -----------------------------------------------------------------------
     // State
@@ -90,19 +97,6 @@ public class AutoApplyService extends Service {
     private final AtomicLong lastScreenExecuteTime = new AtomicLong(0L);
     private final AtomicLong lastFileExecuteTime = new AtomicLong(0L);
 
-    // -----------------------------------------------------------------------
-    // Heartbeat Runnable — kiểm tra định kỳ mỗi 30 phút
-    // -----------------------------------------------------------------------
-
-    private final Runnable heartbeatRunnable = new Runnable() {
-        @Override
-        public void run() {
-            Log.d(TAG, "Heartbeat 30m triggered.");
-            executeApplySettings("heartbeat_30m");
-            // Lập lịch lần tiếp theo
-            mainHandler.postDelayed(this, HEARTBEAT_INTERVAL_MS);
-        }
-    };
 
     // -----------------------------------------------------------------------
     // BroadcastReceiver — SCREEN_OFF / POWER_CONNECTED / POWER_DISCONNECTED
@@ -196,9 +190,9 @@ public class AutoApplyService extends Service {
         // Khởi động FileObserver theo dõi thư mục AFCM/
         startFileObserver();
 
-        // Khởi động Heartbeat Timer — lần đầu chạy sau 30 phút
-        mainHandler.postDelayed(heartbeatRunnable, HEARTBEAT_INTERVAL_MS);
-        Log.i(TAG, "Heartbeat scheduled: mỗi " + (HEARTBEAT_INTERVAL_MS / 60000) + " phút.");
+        // Khởi động Heartbeat Watchdog — one-shot AlarmManager, 15 phút từ bây giờ
+        scheduleHeartbeatWatchdog();
+        Log.i(TAG, "Heartbeat watchdog scheduled: 15 phút sau sự kiện cuối.");
 
         updateNotification("Sẵn sàng theo dõi TC.json");
     }
@@ -207,6 +201,13 @@ public class AutoApplyService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null)
             return START_STICKY;
+
+        // Xử lý Heartbeat Watchdog trigger từ AlarmManager
+        if ("heartbeat_watchdog".equals(intent.getStringExtra("trigger"))) {
+            Log.d(TAG, "Heartbeat watchdog 15m triggered.");
+            executeApplySettings("heartbeat_watchdog");
+            return START_STICKY;
+        }
 
         String action = intent.getAction();
         if (ACTION_APPLY_NOW.equals(action)) {
@@ -226,12 +227,12 @@ public class AutoApplyService extends Service {
 
     @Override
     public void onDestroy() {
-        // 1. Hủy Heartbeat Timer
+        // 1. Hủy Heartbeat Watchdog (AlarmManager)
         try {
-            mainHandler.removeCallbacks(heartbeatRunnable);
-            Log.d(TAG, "Heartbeat timer cancelled.");
+            cancelHeartbeatWatchdog();
+            Log.d(TAG, "Heartbeat watchdog cancelled.");
         } catch (Exception e) {
-            Log.w(TAG, "Heartbeat cancel error", e);
+            Log.w(TAG, "Heartbeat watchdog cancel error", e);
         }
 
         // 2. Ngừng FileObserver
@@ -353,6 +354,7 @@ public class AutoApplyService extends Service {
             if (!jsonFile.exists() || !jsonFile.canRead()) {
                 Log.w(TAG, "Cảnh báo: File TC.json không hợp lệ hoặc bị xóa, giữ nguyên giá trị hệ thống hiện tại.");
                 updateNotification("thancau: Cảnh báo file TC.json lỗi cú pháp");
+                scheduleHeartbeatWatchdog();
                 return;
             }
 
@@ -364,6 +366,7 @@ public class AutoApplyService extends Service {
                 if (content.isEmpty()) {
                     Log.w(TAG, "Cảnh báo: File TC.json không hợp lệ hoặc bị xóa, giữ nguyên giá trị hệ thống hiện tại.");
                     updateNotification("thancau: Cảnh báo file TC.json lỗi cú pháp");
+                    scheduleHeartbeatWatchdog();
                     return;
                 }
 
@@ -444,7 +447,58 @@ public class AutoApplyService extends Service {
                 Log.w(TAG, "Cảnh báo: File TC.json không hợp lệ hoặc bị xóa, giữ nguyên giá trị hệ thống hiện tại.", e);
                 updateNotification("thancau: Cảnh báo file TC.json lỗi cú pháp");
             }
+
+            // Luôn trượt lùi watchdog 15 phút sau mỗi lần executeApplySettings hoàn tất
+            scheduleHeartbeatWatchdog();
         });
+    }
+
+    // -----------------------------------------------------------------------
+    // Sliding Watchdog Timer — AlarmManager one-shot, trượt 15 phút
+    // -----------------------------------------------------------------------
+
+    /**
+     * Đặt (hoặc trượt lùi) Heartbeat Watchdog 15 phút tính từ thời điểm hiện tại.
+     * Mỗi lần gọi sẽ hủy lịch cũ rồi đặt lịch mới → đảm bảo chỉ có đúng 1 alarm.
+     */
+    private void scheduleHeartbeatWatchdog() {
+        Intent intent = new Intent(this, AutoApplyService.class);
+        intent.putExtra("trigger", "heartbeat_watchdog");
+
+        PendingIntent pi = PendingIntent.getService(
+                this,
+                HEARTBEAT_REQUEST_CODE,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        if (am != null) {
+            am.cancel(pi); // Hủy lịch cũ (nếu có)
+            am.setAndAllowWhileIdle(
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    SystemClock.elapsedRealtime() + HEARTBEAT_INTERVAL,
+                    pi);
+        }
+        Log.d(TAG, "Heartbeat watchdog đã dời lịch 15 phút tính từ sự kiện vừa xong.");
+    }
+
+    /**
+     * Hủy Heartbeat Watchdog — gọi khi Service bị destroy.
+     */
+    private void cancelHeartbeatWatchdog() {
+        Intent intent = new Intent(this, AutoApplyService.class);
+        intent.putExtra("trigger", "heartbeat_watchdog");
+
+        PendingIntent pi = PendingIntent.getService(
+                this,
+                HEARTBEAT_REQUEST_CODE,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        if (am != null) {
+            am.cancel(pi);
+        }
     }
 
     // -----------------------------------------------------------------------
